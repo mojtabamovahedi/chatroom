@@ -15,9 +15,7 @@ func Run(appContainer *app.App, cfg config.ServerConfig) error {
 	router.Use(recover2.New())
 	router.Use(logger.New())
 
-	api := router.Group("/api/v1")
-
-	registerAPI(appContainer, api)
+	registerAPI(appContainer, router)
 
 	return router.Listen(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port))
 }
