@@ -1,14 +1,16 @@
 package main
 
 import (
+	"github.com/mojtabamovahedi/chatroom/server/api/handler/http"
 	"github.com/mojtabamovahedi/chatroom/server/app"
 	"github.com/mojtabamovahedi/chatroom/server/config"
+	"log"
 )
 
 func main() {
 
 	cfg := config.MustReadConfig("config.json")
-	chatroomApp := app.MustNewApp(cfg)
+	appContainer := app.MustNewApp(cfg)
 
-	_ = chatroomApp
+	log.Fatal(http.Run(appContainer, cfg.Server))
 }

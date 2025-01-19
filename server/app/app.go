@@ -39,3 +39,7 @@ func (app *App) setNats() error {
 	app.natsClient = *n
 	return nil
 }
+
+func (app *App) Nats() *nats.Nats {
+	return &app.natsClient
+}
