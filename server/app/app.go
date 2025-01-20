@@ -2,12 +2,15 @@ package app
 
 import (
 	"github.com/mojtabamovahedi/chatroom/server/config"
+	chatMap "github.com/mojtabamovahedi/chatroom/server/pkg/map"
 	"github.com/mojtabamovahedi/chatroom/server/pkg/nats"
 )
 
 type App struct {
-	cfg        config.Config
-	natsClient nats.Nats
+	cfg         config.Config
+	natsClient  nats.Nats
+	userMap     *chatMap.Map[string, string]
+	chatroomMap *chatMap.Map[string, string]
 }
 
 func NewApp(cfg config.Config) (*App, error) {
@@ -19,6 +22,9 @@ func NewApp(cfg config.Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	app.userMap = chatMap.NewMap[string, string]()
+	app.chatroomMap = chatMap.NewMap[string, string]()
 
 	return app, nil
 }
@@ -38,6 +44,14 @@ func (app *App) setNats() error {
 	}
 	app.natsClient = *n
 	return nil
+}
+
+func (app *App) MapUser() *chatMap.Map[string, string] {
+	return app.userMap
+}
+
+func (app *App) MapChatroom() *chatMap.Map[string, string] {
+	return app.chatroomMap
 }
 
 func (app *App) Nats() *nats.Nats {
