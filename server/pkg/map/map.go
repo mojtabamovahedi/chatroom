@@ -19,10 +19,11 @@ func (m *Map[T, V]) Set(key T, value V) {
 	m.m[key] = value
 }
 
-func (m *Map[T, V]) Get(key T) V {
+func (m *Map[T, V]) Get(key T) (V, bool) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
-	return m.m[key]
+	value, ok := m.m[key]
+	return value, ok
 }
 
 func (m *Map[T, V]) Remove(key T) {

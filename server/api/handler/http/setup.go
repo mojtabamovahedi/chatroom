@@ -21,6 +21,12 @@ func Run(appContainer *app.App, cfg config.ServerConfig) error {
 }
 
 func registerAPI(appContainer *app.App, router fiber.Router) {
+	chatGroup := router.Group("/api/v1/chat")
+
+	chatGroup.Post("/create", CreateChatRoom(appContainer.MapUser(), appContainer.MapChatroom()))
+	chatGroup.Post("/join", JoinChatRoom(appContainer.MapUser(), appContainer.MapChatroom()))
+
+	// web socket
 	router.Use(UpgradedWebSocket())
-	router.Get("ws/:chatId", chatroomWebsocket(appContainer.Nats()))
+	router.Get("chatroom/:chatId", chatroomWebsocket(appContainer.Nats()))
 }
