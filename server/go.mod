@@ -3,6 +3,7 @@ module github.com/mojtabamovahedi/chatroom/server
 go 1.23.4
 
 require (
+	github.com/aidarkhanov/nanoid v1.0.8 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/fasthttp/websocket v1.5.12 // indirect
 	github.com/gofiber/contrib/websocket v1.3.3 // indirect
