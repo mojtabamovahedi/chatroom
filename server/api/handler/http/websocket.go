@@ -14,13 +14,18 @@ func chatroomWebsocket(natsClient *nats.Nats) fiber.Handler {
 	var (
 		subject string
 		wg      sync.WaitGroup
-		ch      = make(chan string)
+		ch      = make(chan []byte)
 	)
 	return websocket.New(func(c *websocket.Conn) {
 		chatId := c.Params("chatId")
-		_ = chatId
+		subject = fmt.Sprintf("%s.%s", nats.BaseSubject, chatId)
+
+		//id := c.Headers("id", "")
+		//if len(id) == 0 {
+		//	_ = c.Close()
+		//}
 		subscribe, subErr := natsClient.Subscribe(subject, func(msg *nats2.Msg) {
-			ch <- string(msg.Data)
+			ch <- msg.Data
 		})
 
 		if subErr != nil {
@@ -48,10 +53,11 @@ func chatroomWebsocket(natsClient *nats.Nats) fiber.Handler {
 			for {
 				if mt, msg, err = c.ReadMessage(); err != nil {
 					log.Println("read:", err)
-					err = natsClient.Publish(subject, msg)
-					if err != nil {
-						log.Println("error in read message:", err)
-					}
+					return
+				}
+				err = natsClient.Publish(subject, msg)
+				if err != nil {
+					log.Println("error in publish message:", err)
 				}
 			}
 		}()
@@ -64,7 +70,7 @@ func chatroomWebsocket(natsClient *nats.Nats) fiber.Handler {
 					break
 				}
 				err := c.WriteJSON(fiber.Map{
-					"message": v,
+					"message": string(v),
 				})
 				if err != nil {
 					log.Println("write:", err)

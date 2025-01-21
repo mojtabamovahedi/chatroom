@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const BaseSubject = "snapp.chatroom"
+
 type Nats struct {
 	conn *nats.Conn
 }
