@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -11,21 +12,21 @@ import (
 )
 
 func chatroomWebsocket(natsClient *nats.Nats) fiber.Handler {
-	var (
-		subject string
-		wg      sync.WaitGroup
-		ch      = make(chan []byte)
-	)
 	return websocket.New(func(c *websocket.Conn) {
 		chatId := c.Params("chatId")
-		subject = fmt.Sprintf("%s.%s", nats.BaseSubject, chatId)
+		var (
+			subject = fmt.Sprintf("%s.%s", nats.BaseSubject, chatId)
+			wg      sync.WaitGroup
+			ch      = make(chan []byte)
+		)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
-		//id := c.Headers("id", "")
-		//if len(id) == 0 {
-		//	_ = c.Close()
-		//}
 		subscribe, subErr := natsClient.Subscribe(subject, func(msg *nats2.Msg) {
-			ch <- msg.Data
+			select {
+			case ch <- msg.Data:
+			case <-ctx.Done():
+			}
 		})
 
 		if subErr != nil {
@@ -36,24 +37,23 @@ func chatroomWebsocket(natsClient *nats.Nats) fiber.Handler {
 		}
 
 		defer func() {
-			fmt.Println("connection closed")
+			log.Println("connection closed")
 			_ = subscribe.Unsubscribe()
+			close(ch)
 		}()
 
 		wg.Add(2)
 
 		go func() {
-			var (
-				mt  int
-				msg []byte
-				err error
-			)
-			_ = mt
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+				cancel()
+			}()
 			for {
-				if mt, msg, err = c.ReadMessage(); err != nil {
+				_, msg, err := c.ReadMessage()
+				if err != nil {
 					log.Println("read:", err)
-					return
+					break
 				}
 				err = natsClient.Publish(subject, msg)
 				if err != nil {
@@ -63,23 +63,30 @@ func chatroomWebsocket(natsClient *nats.Nats) fiber.Handler {
 		}()
 
 		go func() {
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+				cancel()
+			}()
 			for {
-				v, ok := <-ch
-				if !ok {
-					break
-				}
-				err := c.WriteJSON(fiber.Map{
-					"message": string(v),
-				})
-				if err != nil {
-					log.Println("write:", err)
-					break
+				select {
+				case v, ok := <-ch:
+					if !ok {
+						return
+					}
+					err := c.WriteJSON(fiber.Map{
+						"message": string(v),
+					})
+					if err != nil {
+						log.Println("write:", err)
+						return
+					}
+				case <-ctx.Done(): // Stop if the context is canceled
+					return
 				}
 			}
 		}()
 
 		wg.Wait()
-
+		fmt.Println("we are closed")
 	})
 }
