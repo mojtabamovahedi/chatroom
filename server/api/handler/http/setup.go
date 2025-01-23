@@ -28,5 +28,5 @@ func registerAPI(appContainer *app.App, router fiber.Router) {
 
 	// web socket
 	router.Use(UpgradedWebSocket())
-	router.Get("chatroom/:chatId", chatroomWebsocket(appContainer.Nats()))
+	router.Get("chatroom/:chatId", chatroomWebsocket(appContainer.Nats(), appContainer.MapUser(), appContainer.MapChatroom()))
 }

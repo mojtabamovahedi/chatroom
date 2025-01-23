@@ -44,6 +44,7 @@ func CreateChatRoom(userMap *chatMap.Map[string, *types.User], chatroomMap *chat
 		// will add jwt token
 		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 			"chatroomId": chatroomId,
+			"userID":     userId,
 		})
 	}
 }
