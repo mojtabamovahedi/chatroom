@@ -11,7 +11,13 @@ import (
 	"github.com/mojtabamovahedi/chatroom/server/pkg/nats"
 	nats2 "github.com/nats-io/nats.go"
 	"log"
+	"strings"
 	"sync"
+)
+
+const (
+	Owner   = "SNAPP CHAT"
+	OwnerID = "-1"
 )
 
 func chatroomWebsocket(
@@ -22,7 +28,6 @@ func chatroomWebsocket(
 	return websocket.New(func(c *websocket.Conn) {
 		chatId := c.Params("chatId")
 		userId := c.Query("userId", "")
-		fmt.Println("user id: ", userId)
 		if len(chatId) == 0 {
 			_ = c.WriteJSON(fiber.Map{
 				"message": "please enter you chatroom id",
@@ -51,6 +56,14 @@ func chatroomWebsocket(
 			})
 			return
 		}
+
+		room, ok := chatroomMap.Get(chatId)
+		if !ok {
+			_ = c.WriteJSON(fiber.Map{
+				"message": "this chatroom doesn't exist",
+			})
+		}
+
 		var (
 			name    = currentUser.Name
 			id      = currentUser.Id
@@ -76,11 +89,30 @@ func chatroomWebsocket(
 		}
 
 		defer func() {
-			// userMap.Remove("")
+			userMap.Remove(userId)
+			isEmpty := room.RemoveChatter(currentUser)
+			if isEmpty {
+				chatroomMap.Remove(room.Id)
+			}
 			_ = subscribe.Unsubscribe()
+
+			msg := message{
+				msg:  fmt.Sprintf("'%s' left the chatroom", name),
+				name: Owner,
+				id:   OwnerID,
+			}
+			data, _ := json.Marshal(msg)
+			_ = natsClient.Publish(subject, data)
 			close(ch)
-			log.Println("connection closed")
 		}()
+
+		joinMsg := message{
+			msg:  fmt.Sprintf("'%s' join the chatroom", name),
+			name: Owner,
+			id:   OwnerID,
+		}
+		joinData, _ := json.Marshal(joinMsg)
+		_ = natsClient.Publish(subject, joinData)
 
 		wg.Add(2)
 
@@ -89,21 +121,28 @@ func chatroomWebsocket(
 				wg.Done()
 				cancel()
 			}()
+			var (
+				msg  message
+				err  error
+				read []byte
+				data []byte
+			)
 			for {
-				_, msg, err := c.ReadMessage()
+				_, read, err = c.ReadMessage()
 				if err != nil {
-					if !websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-						log.Println("read:", err)
-					}
+					log.Println("read:", err)
 					break
 				}
-				message := Message{
-					Msg:  string(msg),
-					Name: name,
-					Id:   id,
+				msg = message{
+					msg:  strings.TrimSpace(string(read)),
+					name: name,
+					id:   id,
 				}
-				arr, _ := json.Marshal(message)
-				err = natsClient.Publish(subject, arr)
+				data, err = json.Marshal(msg)
+				if err != nil {
+					continue
+				}
+				err = natsClient.Publish(subject, data)
 				if err != nil {
 					log.Println("error in publish message:", err)
 				}
@@ -115,27 +154,32 @@ func chatroomWebsocket(
 				wg.Done()
 				cancel()
 			}()
+			var (
+				msg  message
+				err  error
+				data []byte
+			)
 			for {
 				select {
-				case v, ok := <-ch:
+				case data, ok = <-ch:
 					if !ok {
-						return
+						break
 					}
-					var v2 Message
-					_ = json.Unmarshal(v, &v2)
-					if v2.Id == id {
+
+					err = json.Unmarshal(data, &msg)
+					if msg.id == id {
 						continue
 					}
-					err := c.WriteJSON(fiber.Map{
-						"message": v2.Msg,
-						"name":    v2.Name,
+					err = c.WriteJSON(fiber.Map{
+						"message": msg.msg,
+						"name":    msg.name,
 					})
 					if err != nil {
 						log.Println("write:", err)
-						return
+						break
 					}
 				case <-ctx.Done():
-					return
+					break
 				}
 			}
 		}()
@@ -144,8 +188,8 @@ func chatroomWebsocket(
 	})
 }
 
-type Message struct {
-	Msg  string
-	Name string
-	Id   string
+type message struct {
+	msg  string
+	name string
+	id   string
 }

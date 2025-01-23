@@ -5,11 +5,11 @@ import "sync"
 type ChatRoom struct {
 	Id       string
 	Name     string
-	Admin    User
+	Admin    *User
 	Chatters *users
 }
 
-func NewChatRoom(id, name string, admin User) *ChatRoom {
+func NewChatRoom(id, name string, admin *User) *ChatRoom {
 	cr := &ChatRoom{
 		Id:       id,
 		Name:     name,
@@ -22,15 +22,16 @@ func NewChatRoom(id, name string, admin User) *ChatRoom {
 	return cr
 }
 
-func (cr *ChatRoom) AddChatter(u User) {
+func (cr *ChatRoom) AddChatter(u *User) {
 	cr.Chatters.add(u)
 }
 
-func (cr *ChatRoom) RemoveChatter(u User) {
+func (cr *ChatRoom) RemoveChatter(u *User) bool {
 	cr.Chatters.remove(u)
+	return cr.UserLen() == 0
 }
 
-func (cr *ChatRoom) GetChatters() []User {
+func (cr *ChatRoom) GetChatters() []*User {
 	return cr.Chatters.users
 }
 
@@ -40,12 +41,12 @@ func (cr *ChatRoom) UserLen() int {
 
 type users struct {
 	lock  sync.RWMutex
-	users []User
+	users []*User
 }
 
 func newUsers() *users {
 	return &users{
-		users: make([]User, 0),
+		users: make([]*User, 0),
 	}
 }
 
@@ -53,13 +54,13 @@ func (u *users) len() int {
 	return len(u.users)
 }
 
-func (u *users) add(user User) {
+func (u *users) add(user *User) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 	u.users = append(u.users, user)
 }
 
-func (u *users) remove(user User) {
+func (u *users) remove(user *User) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 	i := u.find(user)
@@ -69,7 +70,7 @@ func (u *users) remove(user User) {
 	u.users = append(u.users[:i], u.users[i+1:]...)
 }
 
-func (u *users) find(user User) int {
+func (u *users) find(user *User) int {
 	for i, v := range u.users {
 		if user.Id == v.Id {
 			return i

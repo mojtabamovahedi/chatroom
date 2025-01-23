@@ -9,7 +9,7 @@ import (
 
 type App struct {
 	cfg         config.Config
-	natsClient  nats.Nats
+	natsClient  *nats.Nats
 	chatroomMap *chatMap.Map[string, *types.ChatRoom]
 	userMap     *chatMap.Map[string, *types.User]
 }
@@ -43,7 +43,7 @@ func (app *App) setNats() error {
 	if err != nil {
 		return err
 	}
-	app.natsClient = *n
+	app.natsClient = n
 	return nil
 }
 
@@ -56,5 +56,5 @@ func (app *App) MapChatroom() *chatMap.Map[string, *types.ChatRoom] {
 }
 
 func (app *App) Nats() *nats.Nats {
-	return &app.natsClient
+	return app.natsClient
 }

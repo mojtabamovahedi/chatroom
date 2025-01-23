@@ -14,6 +14,7 @@ func Run(appContainer *app.App, cfg config.ServerConfig) error {
 
 	router.Use(recover2.New())
 	router.Use(logger.New())
+	router.Use(rateLimiter())
 
 	registerAPI(appContainer, router)
 
@@ -27,6 +28,6 @@ func registerAPI(appContainer *app.App, router fiber.Router) {
 	chatGroup.Post("/join", JoinChatRoom(appContainer.MapUser(), appContainer.MapChatroom()))
 
 	// web socket
-	router.Use(UpgradedWebSocket())
+	router.Use(upgradedWebSocket())
 	router.Get("chatroom/:chatId", chatroomWebsocket(appContainer.Nats(), appContainer.MapUser(), appContainer.MapChatroom()))
 }

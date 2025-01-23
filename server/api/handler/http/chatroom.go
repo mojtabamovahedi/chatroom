@@ -10,14 +10,14 @@ import (
 func CreateChatRoom(userMap *chatMap.Map[string, *types.User], chatroomMap *chatMap.Map[string, *types.ChatRoom]) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var (
-			reqBody CreateChatRoomReq
+			reqBody createChatroomReq
 			err     error
 		)
 		if err = c.BodyParser(&reqBody); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(errorBodyResponse{Message: "bad request"})
 		}
 
-		if !reqBody.Validate() {
+		if !reqBody.validate() {
 			return c.Status(fiber.StatusBadRequest).JSON(errorBodyResponse{Message: "wrong request body"})
 		}
 
@@ -38,10 +38,9 @@ func CreateChatRoom(userMap *chatMap.Map[string, *types.User], chatroomMap *chat
 		}
 		userMap.Set(userId, user)
 
-		chatroom := types.NewChatRoom(chatroomId, reqBody.ChatRoomName, *user)
+		chatroom := types.NewChatRoom(chatroomId, reqBody.ChatroomName, user)
 		chatroomMap.Set(chatroomId, chatroom)
 
-		// will add jwt token
 		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 			"chatroomId": chatroomId,
 			"userID":     userId,
@@ -49,33 +48,17 @@ func CreateChatRoom(userMap *chatMap.Map[string, *types.User], chatroomMap *chat
 	}
 }
 
-type CreateChatRoomReq struct {
-	Creator      string `json:"creator"`
-	ChatRoomName string `json:"chatroomName"`
-}
-
-func (r CreateChatRoomReq) Validate() bool {
-	if len(r.ChatRoomName) == 0 || len(r.Creator) == 0 {
-		return false
-	}
-	return true
-}
-
-type errorBodyResponse struct {
-	Message string `json:"message"`
-}
-
 func JoinChatRoom(userMap *chatMap.Map[string, *types.User], chatroomMap *chatMap.Map[string, *types.ChatRoom]) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var (
-			reqBody JoinChatRoomReq
+			reqBody joinChatroomReq
 			err     error
 		)
 		if err = c.BodyParser(&reqBody); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(errorBodyResponse{Message: "bad request"})
 		}
 
-		if !reqBody.Validate() {
+		if !reqBody.validate() {
 			return c.Status(fiber.StatusBadRequest).JSON(errorBodyResponse{Message: "wrong request body"})
 		}
 
@@ -107,14 +90,30 @@ func JoinChatRoom(userMap *chatMap.Map[string, *types.User], chatroomMap *chatMa
 	}
 }
 
-type JoinChatRoomReq struct {
+type createChatroomReq struct {
+	Creator      string `json:"creator"`
+	ChatroomName string `json:"chatroomName"`
+}
+
+func (c *createChatroomReq) validate() bool {
+	if len(c.ChatroomName) == 0 || len(c.Creator) == 0 {
+		return false
+	}
+	return true
+}
+
+type joinChatroomReq struct {
 	Name       string `json:"name"`
 	ChatRoomId string `json:"chatroomId"`
 }
 
-func (r JoinChatRoomReq) Validate() bool {
-	if len(r.Name) == 0 || len(r.ChatRoomId) == 0 {
+func (j joinChatroomReq) validate() bool {
+	if len(j.Name) == 0 || len(j.ChatRoomId) == 0 {
 		return false
 	}
 	return true
+}
+
+type errorBodyResponse struct {
+	Message string `json:"message"`
 }
