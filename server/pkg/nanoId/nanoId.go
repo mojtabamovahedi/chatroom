@@ -9,6 +9,8 @@ const (
 	size     = 5
 )
 
+
+// generate a nanoID with numbers and english alphabet with 5 length
 func GenerateId() (string, error) {
 	return nanoid.Generate(alphabet, size)
 }

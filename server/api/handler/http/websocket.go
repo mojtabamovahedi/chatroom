@@ -26,27 +26,36 @@ func chatroomWebsocket(
 	chatroomMap *chatMap.Map[string, *types.ChatRoom],
 ) fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
-		chatId := c.Params("chatId")
-		userId := c.Query("userId", "")
+		// Retrieve chatId from URL parameters
+        chatId := c.Params("chatId")
+        // Retrieve userId from query parameters
+        userId := c.Query("userId", "")
+
+		// Check if chatId is provided
 		if len(chatId) == 0 {
 			_ = c.WriteJSON(fiber.Map{
 				"Message": "please enter you chatroom UserID",
 			})
+			c.Close()
 			return
 		}
 
+		// Retrieve the chat room from the map
 		room, ok := chatroomMap.Get(chatId)
 		if !ok {
 			_ = c.WriteJSON(fiber.Map{
 				"message": "this chatroom doesn't exist",
 			})
+			c.Close()
 			return
 		}
 
+		// Check if userId is provided
 		if len(userId) == 0 {
 			_ = c.WriteJSON(fiber.Map{
 				"message": "please enter your user UserID",
 			})
+			c.Close()
 			return
 		}
 
@@ -55,6 +64,7 @@ func chatroomWebsocket(
 			_ = c.WriteJSON(fiber.Map{
 				"message": "this user doesn't exist",
 			})
+			c.Close()
 			return
 		}
 
@@ -83,6 +93,7 @@ func chatroomWebsocket(
 			_ = c.WriteJSON(fiber.Map{
 				"error": subErr.Error(),
 			})
+			c.Close()
 			return
 		}
 

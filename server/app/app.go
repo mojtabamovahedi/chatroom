@@ -7,6 +7,7 @@ import (
 	"github.com/mojtabamovahedi/chatroom/server/pkg/nats"
 )
 
+// App represents the application with its dependencies
 type App struct {
 	cfg         config.Config
 	natsClient  *nats.Nats
@@ -14,6 +15,7 @@ type App struct {
 	userMap     *chatMap.Map[string, *types.User]
 }
 
+// NewApp creates a new application instance
 func NewApp(cfg config.Config) (*App, error) {
 	app := &App{
 		cfg: cfg,
@@ -30,6 +32,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	return app, nil
 }
 
+// MustNewApp creates a new application instance and panics if there is an error
 func MustNewApp(cfg config.Config) *App {
 	app, err := NewApp(cfg)
 	if err != nil {
@@ -38,29 +41,34 @@ func MustNewApp(cfg config.Config) *App {
 	return app
 }
 
+// setNats initializes the NATS client
 func (app *App) setNats() error {
-	n, err := nats.New(app.cfg.Nats.Host, app.cfg.Nats.Port)
-	if err != nil {
-		return err
-	}
-	app.natsClient = n
-	return nil
+    n, err := nats.New(app.cfg.Nats.Host, app.cfg.Nats.Port)
+    if err != nil {
+        return err
+    }
+    app.natsClient = n
+    return nil
 }
 
+// MapUser returns the user map
 func (app *App) MapUser() *chatMap.Map[string, *types.User] {
-	return app.userMap
+    return app.userMap
 }
 
+// MapChatroom returns the chatroom map
 func (app *App) MapChatroom() *chatMap.Map[string, *types.ChatRoom] {
-	return app.chatroomMap
+    return app.chatroomMap
 }
 
+// Nats returns the NATS client
 func (app *App) Nats() *nats.Nats {
-	return app.natsClient
+    return app.natsClient
 }
 
+// Shutdown closes the NATS client connection
 func (app *App) Shutdown() {
-	if app.natsClient != nil {
-		app.natsClient.Close()
-	}
+    if app.natsClient != nil {
+        app.natsClient.Close()
+    }
 }
