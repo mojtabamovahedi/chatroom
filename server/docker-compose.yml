@@ -1,11 +1,25 @@
 services:
   nats:
     image: nats:latest
-    container_name: chatroom-nats-server
+    container_name: snapp-chat-nats-server
     ports:
       - "4222:4222"
       - "8222:8222"
-    environment:
-      - NATS_CLUSTER_ADVERTISE=localhost
-      - NATS_SERVER_NAME=nats-main
-    command: ["-js"]
+      - "6222:6222"
+#    healthcheck:
+#      test: [ "CMD", "curl", "-f", "http://chatroom-nats-server:8222/healthz" ]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 3
+#      start_period: 10s
+
+  app:
+    container_name: snapp-chat-application
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      nats:
+        condition: service_started
