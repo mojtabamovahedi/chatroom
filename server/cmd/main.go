@@ -18,9 +18,10 @@ func main() {
 
 	flag.Parse()
 
+	log.Println("Starting server...")
+
 	// Read the configuration file
 	cfg := config.MustReadConfig(*configPath)
-
 	// Initialize the application container
 	appContainer := app.MustNewApp(cfg)
 

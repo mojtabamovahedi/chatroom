@@ -5,6 +5,8 @@ import (
 	chatMap "github.com/mojtabamovahedi/chatroom/server/pkg/map"
 	"github.com/mojtabamovahedi/chatroom/server/pkg/map/types"
 	"github.com/mojtabamovahedi/chatroom/server/pkg/nats"
+	"log"
+	"time"
 )
 
 // App represents the application with its dependencies
@@ -25,6 +27,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println("Connected to nats")
 
 	app.chatroomMap = chatMap.NewMap[string, *types.ChatRoom]()
 	app.userMap = chatMap.NewMap[string, *types.User]()
@@ -43,32 +46,34 @@ func MustNewApp(cfg config.Config) *App {
 
 // setNats initializes the NATS client
 func (app *App) setNats() error {
-    n, err := nats.New(app.cfg.Nats.Host, app.cfg.Nats.Port)
-    if err != nil {
-        return err
-    }
-    app.natsClient = n
-    return nil
+	log.Printf("%s:%d", app.cfg.Nats.Host, app.cfg.Nats.Port)
+	time.Sleep(3 * time.Second)
+	n, err := nats.New(app.cfg.Nats.Host, app.cfg.Nats.Port)
+	if err != nil {
+		return err
+	}
+	app.natsClient = n
+	return nil
 }
 
 // MapUser returns the user map
 func (app *App) MapUser() *chatMap.Map[string, *types.User] {
-    return app.userMap
+	return app.userMap
 }
 
 // MapChatroom returns the chatroom map
 func (app *App) MapChatroom() *chatMap.Map[string, *types.ChatRoom] {
-    return app.chatroomMap
+	return app.chatroomMap
 }
 
 // Nats returns the NATS client
 func (app *App) Nats() *nats.Nats {
-    return app.natsClient
+	return app.natsClient
 }
 
 // Shutdown closes the NATS client connection
 func (app *App) Shutdown() {
-    if app.natsClient != nil {
-        app.natsClient.Close()
-    }
+	if app.natsClient != nil {
+		app.natsClient.Close()
+	}
 }
