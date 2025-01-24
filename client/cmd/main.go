@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/fasthttp/websocket"
 	"github.com/mojtabamovahedi/chatroom/client/api"
-	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -16,18 +15,24 @@ import (
 )
 
 var (
-	baseUrl = "localhost:8080"
-	wsUrl   = fmt.Sprintf("ws://%s/chatroom", baseUrl)
+	baseUrl = "0.0.0.0:8080"
+	// flags
+	uFlag   = flag.String("u", "", "Your display name in chatroom.")
+	cFlag   = flag.String("c", "", "Name of chatroom you want to create.")
+	iFlag   = flag.String("i", "", "Chatroom ID you want to join.")
+	urlFlag = flag.String("url", "", fmt.Sprintf("URL of your chatroom. Default is %s", baseUrl))
 )
 
 func main() {
-	var (
-		uFlag = flag.String("u", "", "Your display name in chatroom.")
-		cFlag = flag.String("c", "", "Name of chatroom you want to create.")
-		iFlag = flag.String("i", "", "Chatroom ID you want to join.")
-	)
 	flag.Parse()
 
+	if len(*urlFlag) != 0 {
+		baseUrl = *urlFlag
+	}
+
+	wsUrl := fmt.Sprintf("ws://%s/chatroom", baseUrl)
+
+	// validate flag to get what user need it
 	cID, uID, err := validateFlags(*uFlag, *iFlag, *cFlag)
 	if err != nil {
 		log.Fatal(err)
@@ -35,6 +40,7 @@ func main() {
 
 	connUrl := fmt.Sprintf("%s/%s?userId=%s", wsUrl, cID, uID)
 
+	// connect to ws server
 	conn, _, err := websocket.DefaultDialer.Dial(connUrl, nil)
 	if err != nil {
 		log.Fatal("dial:", err)
@@ -47,7 +53,7 @@ func main() {
 
 	ch := make(chan struct{})
 
-	// read data from server
+	// create goroutine for read data from server
 	go func() {
 		var (
 			msg  message
@@ -57,13 +63,12 @@ func main() {
 		for {
 			_, data, rErr = conn.ReadMessage()
 			if rErr != nil {
-				if rErr == io.EOF {
-				}
 				fmt.Printf("\nError reading message: %v\n", rErr)
 				break
 			}
 
-			if rErr = json.Unmarshal(data, &msg); rErr != nil {
+			rErr = json.Unmarshal(data, &msg)
+			if rErr != nil {
 				continue
 			}
 
@@ -72,7 +77,7 @@ func main() {
 		ch <- struct{}{}
 	}()
 
-	// write data on server
+	// create goroutine for write data on server
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
 		var (
@@ -85,6 +90,7 @@ func main() {
 				break
 			}
 			text = scanner.Text()
+			// check for exit command
 			if text == "#exit" {
 				break
 			}
@@ -97,8 +103,10 @@ func main() {
 		ch <- struct{}{}
 	}()
 
+	// Create a channel to listen for OS signals
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+
 	go func() {
 		<-signalChan
 		ch <- struct{}{}
@@ -123,10 +131,10 @@ func validateFlags(u, i, c string) (cID, uID string, err error) {
 		return "", "", errors.New("you can not create and join chatroom at the same time")
 	}
 
-	chat := api.NewChat(baseUrl)
+	chatAPI := api.NewChat(baseUrl)
 
 	if len(c) != 0 {
-		cBody, err := chat.CreateChatroom(u, c)
+		cBody, err := chatAPI.CreateChatroom(u, c)
 		if err != nil {
 			return "", "", err
 		}
@@ -136,7 +144,7 @@ func validateFlags(u, i, c string) (cID, uID string, err error) {
 	}
 
 	if len(i) != 0 {
-		jBody, err := chat.JoinChatroom(u, i)
+		jBody, err := chatAPI.JoinChatroom(u, i)
 		if err != nil {
 			return "", "", err
 		}
@@ -148,6 +156,7 @@ func validateFlags(u, i, c string) (cID, uID string, err error) {
 
 }
 
+// message type for communication with server
 type message struct {
 	Msg  string `json:"message"`
 	Name string `json:"name"`

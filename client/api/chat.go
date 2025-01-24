@@ -36,11 +36,14 @@ func (c *Chat) CreateChatroom(user, chat string) (*CreateRespBody, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer resp.Body.Close()
+
 	var respBody *CreateRespBody
-	if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
 		return nil, err
 	}
+
 	if len(respBody.Message) != 0 {
 		return nil, errors.New(respBody.Message)
 	}
