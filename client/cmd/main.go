@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/fasthttp/websocket"
 	"github.com/mojtabamovahedi/chatroom/client/api"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -46,16 +47,23 @@ func main() {
 
 	ch := make(chan struct{})
 
+	// read data from server
 	go func() {
-		var msg message
+		var (
+			msg  message
+			data []byte
+			rErr error
+		)
 		for {
-			_, data, err := conn.ReadMessage()
-			if err != nil {
-				fmt.Printf("\nError reading message: %v\n", err)
+			_, data, rErr = conn.ReadMessage()
+			if rErr != nil {
+				if rErr == io.EOF {
+				}
+				fmt.Printf("\nError reading message: %v\n", rErr)
 				break
 			}
 
-			if err := json.Unmarshal(data, &msg); err != nil {
+			if rErr = json.Unmarshal(data, &msg); rErr != nil {
 				continue
 			}
 
@@ -64,20 +72,25 @@ func main() {
 		ch <- struct{}{}
 	}()
 
+	// write data on server
 	go func() {
 		scanner := bufio.NewScanner(os.Stdin)
+		var (
+			wErr error
+			text string
+		)
 		for {
 			if !scanner.Scan() {
 				fmt.Println("\nInput closed.")
 				break
 			}
-			text := scanner.Text()
+			text = scanner.Text()
 			if text == "#exit" {
 				break
 			}
-			err := conn.WriteMessage(websocket.TextMessage, []byte(text))
-			if err != nil {
-				fmt.Printf("Error sending message: %v\n", err)
+			wErr = conn.WriteMessage(websocket.TextMessage, []byte(text))
+			if wErr != nil {
+				fmt.Printf("Error sending message: %v\n", wErr)
 				break
 			}
 		}

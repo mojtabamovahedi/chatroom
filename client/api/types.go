@@ -15,13 +15,13 @@ type Message struct {
 	Name string `json:"name"`
 }
 
-type createRespBody struct {
+type CreateRespBody struct {
 	Message    string `json:"message"`
 	ChatroomID string `json:"chatroomId"`
 	UserId     string `json:"userId"`
 }
 
-type joinRespBody struct {
+type JoinRespBody struct {
 	Message string `json:"message"`
 	UserId  string `json:"userId"`
 	Name    string `json:"name"`

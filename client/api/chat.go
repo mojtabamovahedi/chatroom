@@ -18,7 +18,7 @@ func NewChat(url string) Chat {
 	}
 }
 
-func (c *Chat) CreateChatroom(user, chat string) (*createRespBody, error) {
+func (c *Chat) CreateChatroom(user, chat string) (*CreateRespBody, error) {
 	reqBody := createReqBody{
 		Creator:      user,
 		ChatRoomName: chat,
@@ -37,7 +37,7 @@ func (c *Chat) CreateChatroom(user, chat string) (*createRespBody, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	var respBody *createRespBody
+	var respBody *CreateRespBody
 	if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (c *Chat) CreateChatroom(user, chat string) (*createRespBody, error) {
 	return respBody, nil
 }
 
-func (c *Chat) JoinChatroom(user, chatID string) (*joinRespBody, error) {
+func (c *Chat) JoinChatroom(user, chatID string) (*JoinRespBody, error) {
 	reqBody := joinReqBody{
 		Name:       user,
 		ChatroomID: chatID,
@@ -71,7 +71,7 @@ func (c *Chat) JoinChatroom(user, chatID string) (*joinRespBody, error) {
 	}
 	defer resp.Body.Close()
 
-	var respBody *joinRespBody
+	var respBody *JoinRespBody
 
 	if err = json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
 		return nil, err
