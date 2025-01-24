@@ -58,3 +58,9 @@ func (app *App) MapChatroom() *chatMap.Map[string, *types.ChatRoom] {
 func (app *App) Nats() *nats.Nats {
 	return app.natsClient
 }
+
+func (app *App) Shutdown() {
+	if app.natsClient != nil {
+		app.natsClient.Close()
+	}
+}
