@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/mojtabamovahedi/chatroom/server/api/handler/http"
 	"github.com/mojtabamovahedi/chatroom/server/app"
 	"github.com/mojtabamovahedi/chatroom/server/config"
@@ -17,7 +16,7 @@ var configPath = flag.String("config", "config.json", "Path to config file")
 func main() {
 
 	flag.Parse()
-	fmt.Println(*configPath)
+
 	cfg := config.MustReadConfig(*configPath)
 	appContainer := app.MustNewApp(cfg)
 
