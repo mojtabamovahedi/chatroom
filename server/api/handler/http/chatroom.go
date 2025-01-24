@@ -23,12 +23,12 @@ func CreateChatRoom(userMap *chatMap.Map[string, *types.User], chatroomMap *chat
 
 		userId, err := nanoId.GenerateId()
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(errorBodyResponse{Message: "can not create id for user"})
+			return c.Status(fiber.StatusInternalServerError).JSON(errorBodyResponse{Message: "can not create UserID for user"})
 		}
 
 		chatroomId, err := nanoId.GenerateId()
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(errorBodyResponse{Message: "can not create id for chatroom"})
+			return c.Status(fiber.StatusInternalServerError).JSON(errorBodyResponse{Message: "can not create UserID for chatroom"})
 		}
 
 		user := &types.User{
@@ -71,7 +71,7 @@ func JoinChatRoom(userMap *chatMap.Map[string, *types.User], chatroomMap *chatMa
 
 		userId, err := nanoId.GenerateId()
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(errorBodyResponse{Message: "can not create id for user"})
+			return c.Status(fiber.StatusInternalServerError).JSON(errorBodyResponse{Message: "can not create UserID for user"})
 		}
 
 		user := &types.User{
@@ -84,7 +84,7 @@ func JoinChatRoom(userMap *chatMap.Map[string, *types.User], chatroomMap *chatMa
 
 		return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 			"userId": userId,
-			"name":   user.Name,
+			"Name":   user.Name,
 		})
 
 	}
@@ -103,7 +103,7 @@ func (c *createChatroomReq) validate() bool {
 }
 
 type joinChatroomReq struct {
-	Name       string `json:"name"`
+	Name       string `json:"Name"`
 	ChatRoomId string `json:"chatroomId"`
 }
 
@@ -115,5 +115,5 @@ func (j joinChatroomReq) validate() bool {
 }
 
 type errorBodyResponse struct {
-	Message string `json:"message"`
+	Message string `json:"Message"`
 }

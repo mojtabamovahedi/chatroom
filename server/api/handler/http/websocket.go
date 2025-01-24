@@ -30,12 +30,13 @@ func chatroomWebsocket(
 		userId := c.Query("userId", "")
 		if len(chatId) == 0 {
 			_ = c.WriteJSON(fiber.Map{
-				"message": "please enter you chatroom id",
+				"Message": "please enter you chatroom UserID",
 			})
 			return
 		}
 
-		if _, ok := chatroomMap.Get(chatId); !ok {
+		room, ok := chatroomMap.Get(chatId)
+		if !ok {
 			_ = c.WriteJSON(fiber.Map{
 				"message": "this chatroom doesn't exist",
 			})
@@ -44,7 +45,7 @@ func chatroomWebsocket(
 
 		if len(userId) == 0 {
 			_ = c.WriteJSON(fiber.Map{
-				"message": "please enter your user id",
+				"message": "please enter your user UserID",
 			})
 			return
 		}
@@ -57,20 +58,17 @@ func chatroomWebsocket(
 			return
 		}
 
-		room, ok := chatroomMap.Get(chatId)
-		if !ok {
-			_ = c.WriteJSON(fiber.Map{
-				"message": "this chatroom doesn't exist",
-			})
+		if currentUser.Role != types.ADMIN {
+			room.AddChatter(currentUser)
 		}
-
 		var (
-			name    = currentUser.Name
-			id      = currentUser.Id
+			uName   = currentUser.Name
+			uID     = currentUser.Id
 			subject = fmt.Sprintf("%s.%s", nats.BaseSubject, chatId)
 			wg      sync.WaitGroup
 			ch      = make(chan []byte)
 		)
+
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
@@ -88,7 +86,8 @@ func chatroomWebsocket(
 			return
 		}
 
-		defer func() {
+		// function after user disconnected
+		cleanup := func() {
 			userMap.Remove(userId)
 			isEmpty := room.RemoveChatter(currentUser)
 			if isEmpty {
@@ -96,33 +95,36 @@ func chatroomWebsocket(
 			}
 			_ = subscribe.Unsubscribe()
 
-			msg := message{
-				msg:  fmt.Sprintf("'%s' left the chatroom", name),
-				name: Owner,
-				id:   OwnerID,
+			msg := Message{
+				Msg:    fmt.Sprintf("'%s' left the chatroom", uName),
+				Name:   Owner,
+				UserID: OwnerID,
 			}
 			data, _ := json.Marshal(msg)
 			_ = natsClient.Publish(subject, data)
 			close(ch)
-		}()
+			cancel()
+		}
 
-		joinMsg := message{
-			msg:  fmt.Sprintf("'%s' join the chatroom", name),
-			name: Owner,
-			id:   OwnerID,
+		// welcome message
+		joinMsg := Message{
+			Msg:    fmt.Sprintf("'%s' join the chatroom", uName),
+			Name:   Owner,
+			UserID: OwnerID,
 		}
 		joinData, _ := json.Marshal(joinMsg)
 		_ = natsClient.Publish(subject, joinData)
 
 		wg.Add(2)
 
+		// read message from client
 		go func() {
 			defer func() {
 				wg.Done()
-				cancel()
+				cleanup()
 			}()
 			var (
-				msg  message
+				msg  Message
 				err  error
 				read []byte
 				data []byte
@@ -130,13 +132,31 @@ func chatroomWebsocket(
 			for {
 				_, read, err = c.ReadMessage()
 				if err != nil {
-					log.Println("read:", err)
-					break
+					if !websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure) {
+						log.Println("read:", err)
+					}
+					return
 				}
-				msg = message{
-					msg:  strings.TrimSpace(string(read)),
-					name: name,
-					id:   id,
+
+				if isCommand(string(read)) {
+					var sb strings.Builder
+					sb.WriteString("users in room:")
+					for _, chatter := range room.GetChatters() {
+						sb.WriteString(fmt.Sprintf("\n# '%s'", chatter.Name))
+					}
+
+					_ = c.WriteJSON(Message{
+						Msg:    sb.String(),
+						Name:   Owner,
+						UserID: OwnerID,
+					})
+					continue
+				}
+
+				msg = Message{
+					Msg:    strings.TrimSpace(string(read)),
+					Name:   uName,
+					UserID: uID,
 				}
 				data, err = json.Marshal(msg)
 				if err != nil {
@@ -144,18 +164,19 @@ func chatroomWebsocket(
 				}
 				err = natsClient.Publish(subject, data)
 				if err != nil {
-					log.Println("error in publish message:", err)
+					log.Println("error in publish Message:", err)
 				}
 			}
 		}()
 
+		// write messages to client
 		go func() {
 			defer func() {
 				wg.Done()
-				cancel()
+				cleanup()
 			}()
 			var (
-				msg  message
+				msg  Message
 				err  error
 				data []byte
 			)
@@ -167,12 +188,12 @@ func chatroomWebsocket(
 					}
 
 					err = json.Unmarshal(data, &msg)
-					if msg.id == id {
+					if msg.UserID == uID {
 						continue
 					}
 					err = c.WriteJSON(fiber.Map{
-						"message": msg.msg,
-						"name":    msg.name,
+						"message": msg.Msg,
+						"Name":    msg.Name,
 					})
 					if err != nil {
 						log.Println("write:", err)
@@ -188,8 +209,16 @@ func chatroomWebsocket(
 	})
 }
 
-type message struct {
-	msg  string
-	name string
-	id   string
+type Message struct {
+	Msg    string `json:"message"`
+	Name   string `json:"name"`
+	UserID string `json:"id"`
+}
+
+func isCommand(command string) bool {
+	command = strings.TrimSpace(command)
+	if command == "#users" {
+		return true
+	}
+	return false
 }
