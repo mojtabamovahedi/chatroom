@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	baseUrl = "0.0.0.0:8080"
+	baseUrl = "localhost:8080"
 	// flags
 	uFlag   = flag.String("u", "", "Your display name in chatroom.")
 	cFlag   = flag.String("c", "", "Name of chatroom you want to create.")
