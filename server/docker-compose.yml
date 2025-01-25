@@ -3,9 +3,10 @@ services:
     image: nats:latest
     container_name: snapp-chat-nats-server
     ports:
-      - "4222:4222"
-      - "8222:8222"
-      - "6222:6222"
+      - "4222:4222" # listening port
+      - "8222:8222" # monitoring
+      - "6222:6222" # Cluster port
+#     this health check not working in next commit will work ok (I hope)
 #    healthcheck:
 #      test: [ "CMD", "curl", "-f", "http://chatroom-nats-server:8222/healthz" ]
 #      interval: 10s
