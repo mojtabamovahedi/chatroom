@@ -116,7 +116,8 @@ The client is a Command Line Interface (CLI) application with several options fo
 ### Usage
 1. Build the client:
    ```bash
-   go build -o client ./client
+   cd client
+   go build -o client ./cmd/main.go
    ```
 2. Run the client with the following options:
 
